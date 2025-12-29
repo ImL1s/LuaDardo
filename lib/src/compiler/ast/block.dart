@@ -6,13 +6,17 @@ import 'stat.dart';
 // type Chunk *Block
 
 // block ::= {stat} [retstat]
-// retstat ::= return [explist] [‘;’]
-// explist ::= exp {‘,’ exp}
+// retstat ::= return [explist] [';']
+// explist ::= exp {',' exp}
 class Block extends Node {
   List<Stat> stats;
-  List<Exp> retExps;
+  // Fix #34: Make retExps nullable to distinguish between:
+  // - null: no return statement
+  // - empty list: return statement without values (e.g., "return")
+  // - non-empty list: return statement with values (e.g., "return 1, 2")
+  List<Exp>? retExps;
 
-  Block({required this.stats,required this.retExps});
+  Block({required this.stats, this.retExps});
 
 
   @override
@@ -26,9 +30,9 @@ class Block extends Node {
       }
       sb.write(']');
     }
-    if(retExps.isNotEmpty){
+    if(retExps != null && retExps!.isNotEmpty){
       sb.write(',\nRetExps:[');
-      for(var exp in retExps){
+      for(var exp in retExps!){
         _expToStr(exp,sb);
       }
       sb.writeln(']');

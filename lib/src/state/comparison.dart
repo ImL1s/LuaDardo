@@ -52,7 +52,8 @@ class Comparison {
       return LuaValue.toBoolean(ls.callMetamethod(a, b, mm));
     }
 
-    throw Exception("comparison error!");
+    // Fix #33: Include line number in error message
+    throw Exception(ls.formatError("attempt to compare ${LuaValue.typeName(a)} with ${LuaValue.typeName(b)}"));
   }
 
   static bool le(Object? a, Object? b, LuaStateImpl ls) {
@@ -83,7 +84,8 @@ class Comparison {
       return LuaValue.toBoolean(ls.callMetamethod(b, a, mm));
     }
 
-    throw Exception("comparison error!");
+    // Fix #33: Include line number in error message
+    throw Exception(ls.formatError("attempt to compare ${LuaValue.typeName(a)} with ${LuaValue.typeName(b)}"));
   }
 
 }

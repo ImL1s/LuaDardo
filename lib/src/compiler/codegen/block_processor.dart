@@ -13,8 +13,10 @@ class BlockProcessor {
       StatProcessor.processStat(fi, stat);
     }
 
-    if (node.retExps.isNotEmpty) {
-      processRetStat(fi, node.retExps, node.lastLine);
+    // Fix #34: Check for null instead of isEmpty
+    // null = no return statement, empty list = "return" without values
+    if (node.retExps != null) {
+      processRetStat(fi, node.retExps!, node.lastLine);
     }
   }
 

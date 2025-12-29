@@ -72,9 +72,14 @@ class MathLib{
     }
     /* random integer in the interval [low, up] */
     ls.argCheck(low <= up, 1, "interval is empty");
-    ls.argCheck(low >= 0, 1, "interval too large");
+    // Fix #24: Check for interval overflow instead of requiring low >= 0
+    // Lua allows negative ranges like math.random(-10, 10)
+    final range = up - low;
+    ls.argCheck(range >= 0 && range < 0x7FFFFFFF, 1, "interval too large");
 
-    ls.pushInteger(low + rng.nextInt(up-low));
+    // Fix #24: Use (up - low + 1) to include the upper bound
+    // math.random(1, 10) should return values from 1 to 10 inclusive
+    ls.pushInteger(low + rng.nextInt(range + 1));
     return 1;
   }
 

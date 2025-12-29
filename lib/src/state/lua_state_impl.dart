@@ -60,6 +60,10 @@ class LuaStateImpl implements LuaState, LuaVM {
     if (val is LuaTable) {
       return val.metatable;
     }
+    // Fix #36: Support per-instance metatable for Userdata
+    if (val is Userdata) {
+      return val.metatable;
+    }
     String key = "_MT${LuaValue.typeOf(val)}";
     Object? mt = registry!.get(key);
     return mt != null ? (mt as LuaTable) : null;
@@ -67,6 +71,11 @@ class LuaStateImpl implements LuaState, LuaVM {
 
   void _setMetatable(Object? val, LuaTable? mt) {
     if (val is LuaTable) {
+      val.metatable = mt;
+      return;
+    }
+    // Fix #36: Support per-instance metatable for Userdata
+    if (val is Userdata) {
       val.metatable = mt;
       return;
     }
@@ -244,7 +253,8 @@ class LuaStateImpl implements LuaState, LuaVM {
   void setTop(int idx) {
     int newTop = _stack!.absIndex(idx);
     if (newTop < 0) {
-      throw Exception("stack underflow!");
+      // Fix #33: Include line number in error message
+      throw Exception(_stack!.formatError("stack underflow!"));
     }
 
     int n = _stack!.top() - newTop;
@@ -352,7 +362,8 @@ class LuaStateImpl implements LuaState, LuaVM {
     if (result != null) {
       _stack!.push(result);
     } else {
-      throw Exception("arithmetic error!");
+      // Fix #33: Include line number in error message
+      throw Exception(_stack!.formatError("attempt to perform arithmetic on a non-number value"));
     }
   }
 
@@ -372,7 +383,8 @@ class LuaStateImpl implements LuaState, LuaVM {
       case CmpOp.luaOpLe:
         return Comparison.le(a, b, this);
       default:
-        throw Exception("invalid compare op!");
+        // Fix #33: Include line number in error message
+        throw Exception(_stack!.formatError("invalid compare op!"));
     }
   }
 
@@ -398,7 +410,8 @@ class LuaStateImpl implements LuaState, LuaVM {
           continue;
         }
 
-        throw Exception("concatenation error!");
+        // Fix #33: Include line number in error message
+        throw Exception(_stack!.formatError("attempt to concatenate non-string values"));
       }
     }
     // n == 1, do nothing
@@ -420,7 +433,8 @@ class LuaStateImpl implements LuaState, LuaVM {
     if (val is LuaTable) {
       pushInteger(val.length());
     } else {
-      throw Exception("length error!");
+      // Fix #33: Include line number in error message
+      throw Exception(_stack!.formatError("attempt to get length of a ${LuaValue.typeName(val)} value"));
     }
   }
 
@@ -473,7 +487,8 @@ class LuaStateImpl implements LuaState, LuaVM {
         }
       }
     }
-    throw Exception("${t.runtimeType}, not a table!"); // todo
+    // Fix #33: Include line number in error message
+    throw Exception(_stack!.formatError("attempt to index a ${LuaValue.typeName(t)} value"));
   }
 
   @override
@@ -536,7 +551,8 @@ class LuaStateImpl implements LuaState, LuaVM {
         }
       }
     }
-    throw Exception("${t.runtimeType}, not a table!");
+    // Fix #33: Include line number in error message
+    throw Exception(_stack!.formatError("attempt to index a ${LuaValue.typeName(t)} value"));
   }
 
   @override
@@ -562,7 +578,8 @@ class LuaStateImpl implements LuaState, LuaVM {
         _callDartClosure(nArgs, nResults, c);
       }
     } else {
-      throw Exception("not function!");
+      // Fix #33: Include line number in error message
+      throw Exception(_stack!.formatError("attempt to call a non-function value"));
     }
   }
 
@@ -771,7 +788,8 @@ class LuaStateImpl implements LuaState, LuaVM {
     } else if (mtVal is LuaTable) {
       _setMetatable(val, mtVal);
     } else {
-      throw Exception("table expected!"); // todo
+      // Fix #33: Include line number in error message
+      throw Exception(_stack!.formatError("table expected for metatable"));
     }
   }
 
@@ -789,13 +807,21 @@ class LuaStateImpl implements LuaState, LuaVM {
       }
       return false;
     }
-    throw Exception("table expected!");
+    // Fix #33: Include line number in error message
+    throw Exception(_stack!.formatError("table expected for iteration"));
   }
 
   @override
   int error() {
     Object? err = _stack!.pop();
-    throw Exception(err.toString()); // TODO
+    // Fix #33: Include line number in error message
+    throw Exception(_stack!.formatError(err.toString()));
+  }
+
+  /// Fix #33: Public method to format error messages with line numbers
+  /// This is used by external classes like Comparison and Arithmetic
+  String formatError(String message) {
+    return _stack!.formatError(message);
   }
 
   @override

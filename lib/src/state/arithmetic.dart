@@ -89,7 +89,8 @@ class Arithmetic{
       return ls.callMetamethod(a, b, mm);
     }
 
-    throw Exception("arithmetic error!");
+    // Fix #33: Include line number in error message
+    throw Exception(ls.formatError("attempt to perform arithmetic on a ${LuaValue.typeName(a)} value"));
   }
 
 }

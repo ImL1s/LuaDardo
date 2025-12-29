@@ -40,11 +40,15 @@ class BlockParser {
     }
   }
 
-  // retstat ::= return [explist] [‘;’]
-  // explist ::= exp {‘,’ exp}
-   static List<Exp> parseRetExps(Lexer lexer) {
+  // retstat ::= return [explist] [';']
+  // explist ::= exp {',' exp}
+  // Fix #34: Return nullable List<Exp>? to distinguish:
+  // - null: no return statement present
+  // - empty list: "return" without values
+  // - non-empty list: "return value1, value2, ..."
+  static List<Exp>? parseRetExps(Lexer lexer) {
     if (lexer.LookAhead() != TokenKind.TOKEN_KW_RETURN) {
-      return List.empty();
+      return null; // Fix #34: No return statement
     }
 
     lexer.nextToken();
@@ -54,10 +58,10 @@ class BlockParser {
       case TokenKind.TOKEN_KW_ELSE:
       case TokenKind.TOKEN_KW_ELSEIF:
       case TokenKind.TOKEN_KW_UNTIL:
-        return const <Exp>[];
+        return const <Exp>[]; // return without values
       case TokenKind.TOKEN_SEP_SEMI:
         lexer.nextToken();
-        return const <Exp>[];
+        return const <Exp>[]; // return; without values
       default:
         List<Exp> exps = ExpParser.parseExpList(lexer);
         if (lexer.LookAhead() == TokenKind.TOKEN_SEP_SEMI) {

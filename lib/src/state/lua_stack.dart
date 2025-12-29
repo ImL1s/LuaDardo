@@ -124,4 +124,29 @@ class LuaStack {
       slots[to] = obj;
     }
   }
+
+  /// Fix #33: Get current source line number for error messages
+  /// Returns the line number corresponding to the current instruction (pc),
+  /// or null if line info is not available.
+  int? getCurrentLine() {
+    if (closure?.proto != null && pc > 0 && pc <= closure!.proto!.lineInfo.length) {
+      return closure!.proto!.lineInfo[pc - 1];
+    }
+    return null;
+  }
+
+  /// Fix #33: Get source file name for error messages
+  String? getSource() {
+    return closure?.proto?.source;
+  }
+
+  /// Fix #33: Format error message with line number
+  String formatError(String message) {
+    final line = getCurrentLine();
+    final source = getSource() ?? 'unknown';
+    if (line != null) {
+      return '[$source:$line] $message';
+    }
+    return '[$source] $message';
+  }
 }

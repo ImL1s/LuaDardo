@@ -26,6 +26,27 @@ class LuaValue {
     }
   }
 
+  /// Fix #33: Get the type name as a string for error messages
+  static String typeName(Object? val) {
+    if (val == null) {
+      return "nil";
+    } else if (val is bool) {
+      return "boolean";
+    } else if (val is int || val is double) {
+      return "number";
+    } else if (val is String) {
+      return "string";
+    } else if (val is LuaTable) {
+      return "table";
+    } else if (val is Closure) {
+      return "function";
+    } else if (val is Userdata) {
+      return "userdata";
+    } else {
+      return val.runtimeType.toString();
+    }
+  }
+
   static bool toBoolean(Object? val) {
     if (val == null) {
       return false;
