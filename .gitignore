@@ -12,6 +12,3 @@ pubspec.lock
 *.iml
 .vscode/
 
-# Development notes
-AGENTS.md
-GEMINI.md
