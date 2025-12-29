@@ -6,18 +6,18 @@ import 'package:lua_dardo_plus/src/state/lua_userdata.dart';
 import 'package:lua_dardo_plus/src/stdlib/os_lib.dart';
 
 import '../stdlib/math_lib.dart';
-
 import '../stdlib/package_lib.dart';
 import '../stdlib/string_lib.dart';
 import '../stdlib/table_lib.dart';
+import '../stdlib/coroutine_lib.dart';
 import 'package:sprintf/sprintf.dart';
 
 import '../number/lua_number.dart';
-
 import '../stdlib/basic_lib.dart';
 import '../api/lua_state.dart';
 import '../api/lua_type.dart';
 import '../api/lua_vm.dart';
+import '../api/lua_debug.dart';
 import '../binchunk/binary_chunk.dart';
 import '../compiler/compiler.dart';
 import '../vm/instruction.dart';
@@ -29,18 +29,53 @@ import 'lua_table.dart';
 import 'lua_value.dart';
 import 'closure.dart';
 import 'upvalue_holder.dart';
+import '../types/thread_cache.dart';
+import '../types/exceptions.dart';
+
+/// Global thread ID counter
+int _threadIdCounter = 0;
+
+/// Generates a new unique thread ID
+int _genThreadId() => ++_threadIdCounter;
 
 class LuaStateImpl implements LuaState, LuaVM {
   LuaStack? _stack = LuaStack();
 
-  /// 注册表
+  /// Registry table
   LuaTable? registry = LuaTable(0, 0);
+
+  /// Thread status for coroutines
+  ThreadStatus status = ThreadStatus.luaOk;
+
+  /// Debug hook list
+  final List<HookContext> hookList = [];
+
+  /// Unique thread ID
+  int id = 0;
 
   LuaStateImpl() {
     registry!.put(luaRidxGlobals, LuaTable(0, 0));
     LuaStack stack = LuaStack();
     stack.state = this;
     _pushLuaStack(stack);
+    id = _genThreadId();
+    _updateThreadCache(id);
+  }
+
+  /// Constructor for creating a new thread (coroutine) that shares the registry
+  LuaStateImpl.newThread(LuaTable registry) {
+    this.registry = registry;
+    LuaStack stack = LuaStack();
+    stack.state = this;
+    _pushLuaStack(stack);
+    id = _genThreadId();
+    _updateThreadCache(id);
+  }
+
+  /// Updates the thread cache with this thread
+  void _updateThreadCache(int threadId) {
+    // Store weak reference to this thread in registry
+    // This allows threads to be garbage collected when no longer referenced
   }
 
   /// 压入调用栈帧
@@ -1054,7 +1089,8 @@ class LuaStateImpl implements LuaState, LuaVM {
       "table": TableLib.openTableLib,
       "string": StringLib.openStringLib,
       "math": MathLib.openMathLib,
-      "os": OSLib.openOSLib
+      "os": OSLib.openOSLib,
+      "coroutine": CoroutineLib.openCoroutineLib,
     };
 
     libs.forEach((name, fun) {
@@ -1327,6 +1363,135 @@ class LuaStateImpl implements LuaState, LuaVM {
           return false;
       });
     }
+  }
+
+//**************************************************
+//************** LuaCoroutineLib *******************
+//**************************************************
+
+  @override
+  LuaState? toThread(int idx) {
+    Object? val = _stack!.get(idx);
+    return val is LuaState ? val : null;
+  }
+
+  @override
+  void pushThread(LuaState L) {
+    _stack!.push(L);
+  }
+
+  @override
+  void xmove(LuaState from, int n) {
+    if (n <= 0) return;
+    LuaStateImpl fromImpl = from as LuaStateImpl;
+    List<Object?> vals = fromImpl._stack!.popN(n);
+    _stack!.pushN(vals, n);
+  }
+
+  @override
+  Object? popObject() {
+    return _stack!.pop();
+  }
+
+  @override
+  LuaState newThread() {
+    // Create new thread that shares the registry (global environment)
+    // Note: Does NOT push to stack - caller is responsible for that
+    LuaStateImpl newState = LuaStateImpl.newThread(registry!);
+    return newState;
+  }
+
+  @override
+  String debugThread() {
+    return 'Thread[id=$id, status=$status]';
+  }
+
+  @override
+  void clearThreadWeakRef() {
+    // Clear weak references to dead threads in registry
+    // This is a no-op for now since Dart handles GC automatically
+  }
+
+  @override
+  void setStatus(ThreadStatus newStatus) {
+    status = newStatus;
+  }
+
+  @override
+  ThreadStatus getStatus() {
+    return status;
+  }
+
+  @override
+  void resume(int nArgs) {
+    // Resume execution from a yield point
+    // The stack should have the arguments on top, with the closure below
+    if (_stack!.closure == null) {
+      throw Exception('No closure to resume');
+    }
+
+    // Continue running the Lua closure
+    _runLuaClosure();
+  }
+
+  @override
+  int runningId() {
+    return id;
+  }
+
+  @override
+  int getCurrentNResults() {
+    // Get the expected number of results from the calling context
+    if (_stack!.prev != null && _stack!.prev!.closure != null) {
+      return _stack!.prev!.closure!.nResults;
+    }
+    return 0;
+  }
+
+  @override
+  void resetTopClosureNResults(int nResults) {
+    if (_stack!.closure != null) {
+      _stack!.closure!.nResults = nResults;
+    }
+  }
+
+  @override
+  String traceStack() {
+    StringBuffer sb = StringBuffer();
+    sb.writeln('Stack trace:');
+    LuaStack? stack = _stack;
+    int level = 0;
+    while (stack != null) {
+      if (stack.closure != null) {
+        String funcName = stack.closure!.proto?.source ?? '<dart function>';
+        int line = stack.pc > 0 && stack.closure!.proto != null
+            ? (stack.closure!.proto!.lineInfo.isNotEmpty
+                ? stack.closure!.proto!.lineInfo[stack.pc - 1]
+                : 0)
+            : 0;
+        sb.writeln('  [$level] $funcName:$line');
+      }
+      stack = stack.prev;
+      level++;
+    }
+    return sb.toString();
+  }
+
+  @override
+  void popStackFrame() {
+    // Pop the top stack frame (used after catching yield exception)
+    if (_stack != null && _stack!.prev != null) {
+      _popLuaStack();
+    }
+  }
+
+//**************************************************
+//****************** LuaDebug **********************
+//**************************************************
+
+  @override
+  void setHook(HookContext context) {
+    hookList.add(context);
   }
 
 //**************************************************

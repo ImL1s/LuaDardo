@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2024-12-29
+
+### Added
+- **Coroutine Support**: Full implementation of Lua coroutine library
+  - `coroutine.create(f)` - Create a new coroutine
+  - `coroutine.resume(co, ...)` - Start or resume a coroutine
+  - `coroutine.yield(...)` - Suspend coroutine execution
+  - `coroutine.status(co)` - Get coroutine status (running/suspended/dead)
+  - `coroutine.running()` - Get the currently running coroutine
+  - `coroutine.wrap(f)` - Create a wrapped coroutine function
+- New API interfaces: `LuaCoroutineLib`, `LuaDebug`
+- Thread type support in `LuaValue.typeOf()` and `LuaValue.typeName()`
+- `ThreadStatus.luaDead` for completed coroutines
+- 10 new coroutine tests
+
+### Fixed
+- **Issue #13**: `string.gsub` now works correctly
+  - Fixed infinite loop when using unlimited replacement (n=-1)
+  - Fixed off-by-one error in string slicing
+  - Fixed original string modification during iteration
+
 ## [0.1.0] - 2024-12-29
 
 ### Added
