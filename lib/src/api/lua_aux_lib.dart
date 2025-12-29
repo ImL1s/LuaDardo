@@ -33,6 +33,14 @@ abstract class LuaAuxLib {
 
   bool doString(String str);
 
+  /// Asynchronously execute a Lua file.
+  /// Use this when the file might call async Dart functions.
+  Future<bool> doFileAsync(String filename);
+
+  /// Asynchronously execute a Lua string.
+  /// Use this when the code might call async Dart functions.
+  Future<bool> doStringAsync(String str);
+
   ThreadStatus loadFile(String? filename);
 
   ThreadStatus loadFileX(String? filename, String? mode);
@@ -68,4 +76,7 @@ abstract class LuaAuxLib {
 
   void setMetatableAux(String tname);
   void setFuncs(Map<String, DartFunction?> l, int nup);
+
+  /// Register an async Dart function as a global function.
+  void registerAsync(String name, DartFunctionAsync f);
 }

@@ -13,6 +13,10 @@ const luaRidxGlobals = 2;
 const luaMaxInteger = 1 << 63 - 1;
 const luaMinInteger = -1 << 63;
 
+/// Returns the pseudo-index for an upvalue at the given index (1-based).
+/// Use this in Dart closures to access upvalues pushed before the closure.
+int luaUpvalueIndex(int i) => luaRegistryIndex - i;
+
 /// Abstract base class for Lua state operations.
 /// Combines basic API, auxiliary library, coroutine support, and debug features.
 abstract class LuaState extends LuaBasicAPI implements LuaAuxLib, LuaCoroutineLib, LuaDebug {

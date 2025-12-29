@@ -6,24 +6,29 @@ A maintained fork of [LuaDardo](https://github.com/arcticfox1919/LuaDardo) - Lua
 
 The original LuaDardo has been inactive since July 2023 with several critical bugs unfixed. This fork provides:
 
-- **Bug fixes** for issues #24, #33, #34, #36
+- **Bug fixes** for issues #13, #24, #33, #34, #36
+- **Web platform support** - runs on all platforms including browsers
+- **Async Dart functions** - call async Dart code from Lua
 - **Active maintenance** and community support
-- **100% Dart** - works on all platforms (iOS, Android, Web, Desktop)
+- **100% Dart** - no native dependencies
 
 ### Fixed Issues
 
 | Issue | Description |
 |-------|-------------|
+| #13 | `string.gsub` infinite loop and incorrect replacement |
 | #24 | `math.random` upper bound not inclusive, negative ranges rejected |
 | #33 | Error messages lack source file and line number information |
 | #34 | `return` without value causes runtime error |
 | #36 | Userdata metatables shared globally instead of per-instance |
+| - | `math.min` returning maximum value instead of minimum |
+| - | `math.modf` returning only fractional part |
 
 ## Installation
 
 ```yaml
 dependencies:
-  lua_dardo_plus: ^0.1.0
+  lua_dardo_plus: ^0.3.0
 ```
 
 ## Example
@@ -138,6 +143,74 @@ print('random value is '..rand_val)
   state.call(0, 0);
 }
 ```
+
+### Async Dart Functions
+
+Call async Dart functions from Lua (v0.3.0+):
+
+```dart
+import 'package:lua_dardo_plus/lua.dart';
+
+Future<int> fetchData(LuaState ls) async {
+  final url = ls.checkString(1);
+
+  // Simulate async operation (e.g., HTTP request)
+  await Future.delayed(Duration(seconds: 1));
+
+  ls.pushString('Data from $url');
+  return 1; // Number of return values
+}
+
+void main() async {
+  LuaState state = LuaState.newState();
+  state.openLibs();
+
+  // Register async function
+  state.registerAsync('fetchData', fetchData);
+
+  // Call from Dart using callAsync
+  state.getGlobal('fetchData');
+  state.pushString('https://api.example.com');
+  await state.callAsync(1, 1);
+
+  print(state.toStr(-1)); // "Data from https://api.example.com"
+}
+```
+
+Available async methods:
+- `registerAsync(name, func)` - Register async function as global
+- `pushDartFunctionAsync(func)` - Push async function onto stack
+- `pushDartClosureAsync(func, nUpvals)` - Push async closure with upvalues
+- `callAsync(nArgs, nResults)` - Call function asynchronously
+- `pCallAsync(nArgs, nResults, errFunc)` - Protected async call
+- `doStringAsync(code)` - Execute Lua string asynchronously
+- `doFileAsync(path)` - Execute Lua file asynchronously
+
+### Web Platform Support
+
+LuaDardo Plus works on web platforms (v0.3.0+). The library uses platform abstraction to handle `dart:io` dependencies:
+
+```dart
+import 'package:lua_dardo_plus/lua.dart';
+import 'package:lua_dardo_plus/src/platform/platform.dart';
+
+void main() {
+  // Customize print output (useful for web)
+  PlatformServices.instance.printCallback = (s) {
+    // Redirect to console, DOM, etc.
+    print(s);
+  };
+
+  LuaState state = LuaState.newState();
+  state.openLibs();
+  state.doString('print("Hello from Lua on the web!")');
+}
+```
+
+**Web limitations:**
+- `os.execute()`, `os.exit()`, `os.remove()`, `os.rename()`, `os.getenv()` throw `UnsupportedError`
+- `os.time()`, `os.clock()`, `os.date()`, `os.difftime()` work normally
+- File loading (`doFile`, `loadFile`) not supported on web
 
 ## Migration from lua_dardo
 

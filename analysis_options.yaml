@@ -1,0 +1,8 @@
+include: package:lints/recommended.yaml
+
+linter:
+  rules:
+    # Relax some strict rules for existing code
+    prefer_final_locals: false
+    prefer_const_constructors: false
+    avoid_print: false  # We use print in some places intentionally

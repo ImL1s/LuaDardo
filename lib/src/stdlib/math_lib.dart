@@ -104,10 +104,11 @@ class MathLib{
 
   static int _min(LuaState ls){
     var n = ls.getTop(); /* number of arguments */
-    var imin = 1;        /* index of current maximum value */
+    var imin = 1;        /* index of current minimum value */
     ls.argCheck(n >= 1, 1, "value expected");
     for (var i = 2; i <= n; i++){
-      if(ls.compare(imin, i, CmpOp.luaOpLt)){
+      // Check if stack[i] < stack[imin], then i becomes new minimum
+      if(ls.compare(i, imin, CmpOp.luaOpLt)){
         imin = i;
       }
     }
@@ -232,15 +233,18 @@ class MathLib{
 
   static int _modf(LuaState ls){
     if (ls.isInteger(1)){
-      ls.setTop(1);     /* number is its own integer part */
-      ls.pushNumber(0); /* no fractional part */
+      var intVal = ls.toInteger(1);
+      ls.setTop(0);     // Clear stack
+      ls.pushInteger(intVal);  // Push integer part
+      ls.pushNumber(0);  // Push fractional part (0)
     } else {
       var x = ls.checkNumber(1)!;
-      var o = x.floor();
-      ls.pushInteger(o);
-      ls.pushNumber(x-o);
+      var intPart = x.floor();
+      ls.setTop(0);     // Clear stack
+      ls.pushInteger(intPart);
+      ls.pushNumber(x - intPart);
     }
-    return 1;
+    return 2;  // Return both integer and fractional parts
   }
 
   static int _abs(LuaState ls){

@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import '../api/lua_state.dart';
 import '../api/lua_type.dart';
+import '../platform/platform.dart';
 
 class BasicLib {
   static const Map<String, DartFunction?> _baseFuncs = {
@@ -61,12 +61,12 @@ class BasicLib {
         return ls.error2("'tostring' must return a string to 'print'");
       }
       if (i > 1) {
-        stdout.write("\t");
+        PlatformServices.instance.printCallback("\t");
       }
-      stdout.write(s);
+      PlatformServices.instance.printCallback(s);
       ls.pop(1); /* pop result */
     }
-    stdout.write('\n');
+    PlatformServices.instance.printCallback('\n');
     return 0;
   }
 

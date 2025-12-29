@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:io';
 
 import 'package:lua_dardo_plus/src/state/lua_userdata.dart';
 import 'package:lua_dardo_plus/src/stdlib/os_lib.dart';
+import '../platform/platform.dart';
 
 import '../stdlib/math_lib.dart';
 import '../stdlib/package_lib.dart';
@@ -683,6 +683,83 @@ class LuaStateImpl implements LuaState, LuaVM {
     }
   }
 
+  /// Asynchronously call a function.
+  /// This handles both sync and async Dart functions as well as Lua closures.
+  @override
+  Future<void> callAsync(int nArgs, int nResults) async {
+    Object? val = _stack!.get(-(nArgs + 1));
+    Object? f = val is Closure ? val : null;
+
+    if (f == null) {
+      Object? mf = _getMetafield(val, "__call");
+      if (mf != null && mf is Closure) {
+        _stack!.push(f);
+        insert(-(nArgs + 2));
+        nArgs += 1;
+        f = mf;
+      }
+    }
+
+    if (f != null) {
+      Closure c = f as Closure;
+      if (c.proto != null) {
+        _callLuaClosure(nArgs, nResults, c);
+      } else if (c.isAsync) {
+        await _callDartClosureAsync(nArgs, nResults, c);
+      } else {
+        _callDartClosure(nArgs, nResults, c);
+      }
+    } else {
+      throw Exception(
+          _stack!.formatError("attempt to call a non-function value"));
+    }
+  }
+
+  /// Asynchronously call an async Dart closure.
+  Future<void> _callDartClosureAsync(
+      int nArgs, int nResults, Closure c) async {
+    // create new lua stack
+    LuaStack newStack = LuaStack();
+    newStack.state = this;
+    newStack.closure = c;
+
+    // pass args, pop func
+    if (nArgs > 0) {
+      newStack.pushN(_stack!.popN(nArgs), nArgs);
+    }
+    _stack!.pop();
+
+    // run closure
+    _pushLuaStack(newStack);
+    int r = await c.dartFuncAsync!.call(this);
+    _popLuaStack();
+
+    // return results
+    if (nResults != 0) {
+      List<Object?> results = newStack.popN(r);
+      _stack!.pushN(results, nResults);
+    }
+  }
+
+  /// Asynchronously call a function in protected mode.
+  @override
+  Future<ThreadStatus> pCallAsync(int nArgs, int nResults, int msgh) async {
+    LuaStack? caller = _stack;
+    try {
+      await callAsync(nArgs, nResults);
+      return ThreadStatus.luaOk;
+    } catch (e) {
+      if (msgh != 0) {
+        rethrow;
+      }
+      while (_stack != caller) {
+        _popLuaStack();
+      }
+      _stack!.push("$e");
+      return ThreadStatus.luaErrRun;
+    }
+  }
+
   @override
   ThreadStatus load(Uint8List chunk, String chunkName, String? mode) {
     Prototype proto = BinaryChunk.isBinaryChunk(chunk)
@@ -730,7 +807,22 @@ class LuaStateImpl implements LuaState, LuaVM {
     Closure closure = Closure.DartFunc(f, n);
     for (int i = n; i > 0; i--) {
       Object? val = _stack!.pop();
-      closure.upvals[i - 1] = UpvalueHolder.value(val); // TODO
+      closure.upvals[i - 1] = UpvalueHolder.value(val);
+    }
+    _stack!.push(closure);
+  }
+
+  @override
+  void pushDartFunctionAsync(DartFunctionAsync f) {
+    _stack!.push(Closure.DartFuncAsync(f, 0));
+  }
+
+  @override
+  void pushDartClosureAsync(DartFunctionAsync f, int n) {
+    Closure closure = Closure.DartFuncAsync(f, n);
+    for (int i = n; i > 0; i--) {
+      Object? val = _stack!.pop();
+      closure.upvals[i - 1] = UpvalueHolder.value(val);
     }
     _stack!.push(closure);
   }
@@ -738,6 +830,12 @@ class LuaStateImpl implements LuaState, LuaVM {
   @override
   void register(String name, f) {
     pushDartFunction(f);
+    setGlobal(name);
+  }
+
+  @override
+  void registerAsync(String name, DartFunctionAsync f) {
+    pushDartFunctionAsync(f);
     setGlobal(name);
   }
 
@@ -994,6 +1092,32 @@ class LuaStateImpl implements LuaState, LuaVM {
   }
 
   @override
+  Future<bool> doFileAsync(String filename) async {
+    try {
+      if (loadFile(filename) != ThreadStatus.luaOk) {
+        return false;
+      }
+      return await pCallAsync(0, luaMultret, 0) == ThreadStatus.luaOk;
+    } catch (e) {
+      _stack!.push("$e");
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> doStringAsync(String str) async {
+    try {
+      if (loadString(str) != ThreadStatus.luaOk) {
+        return false;
+      }
+      return await pCallAsync(0, luaMultret, 0) == ThreadStatus.luaOk;
+    } catch (e) {
+      _stack!.push("$e");
+      return false;
+    }
+  }
+
+  @override
   int error2(String fmt, [List<Object?>? a]) {
     pushFString(fmt, a);
     return error();
@@ -1053,11 +1177,20 @@ class LuaStateImpl implements LuaState, LuaVM {
 
   @override
   ThreadStatus loadFileX(String? filename, String? mode) {
+    if (!PlatformServices.instance.supportsFileSystem) {
+      return ThreadStatus.luaErrFile;
+    }
+
     try {
-      File file = File(filename!);
-      return load(file.readAsBytesSync(), "@" + filename, mode);
+      final bytes = PlatformServices.instance.readFileAsBytes(filename!);
+      if (bytes == null) {
+        return ThreadStatus.luaErrFile;
+      }
+      return load(bytes, "@" + filename, mode);
     } catch (e, s) {
+      // ignore: avoid_print
       print(e);
+      // ignore: avoid_print
       print(s);
       return ThreadStatus.luaErrFile;
     }

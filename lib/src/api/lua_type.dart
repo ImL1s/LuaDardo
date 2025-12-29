@@ -52,4 +52,10 @@ enum ThreadStatus {
   luaErrFile,
 }
 
+/// Synchronous Dart function that can be called from Lua.
+/// Returns the number of values pushed onto the Lua stack.
 typedef DartFunction = int Function(LuaState ls);
+
+/// Asynchronous Dart function that can be called from Lua.
+/// Returns a Future that resolves to the number of values pushed onto the Lua stack.
+typedef DartFunctionAsync = Future<int> Function(LuaState ls);

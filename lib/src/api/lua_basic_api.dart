@@ -94,6 +94,12 @@ abstract class LuaBasicAPI {
 
   void pushDartClosure(DartFunction f, int n);
 
+  /// Push an async Dart function onto the stack.
+  void pushDartFunctionAsync(DartFunctionAsync f);
+
+  /// Push an async Dart closure onto the stack with upvalues.
+  void pushDartClosureAsync(DartFunctionAsync f, int n);
+
   void pushGlobalTable();
 
 /* comparison and arithmetic functions */
@@ -147,6 +153,14 @@ abstract class LuaBasicAPI {
   void call(int nArgs, int nResults);
 
   ThreadStatus pCall(int nArgs, int nResults, int msgh);
+
+  /// Asynchronously call a function.
+  /// Use this when the function being called might be an async Dart function.
+  Future<void> callAsync(int nArgs, int nResults);
+
+  /// Asynchronously call a function in protected mode.
+  /// Use this when the function being called might be an async Dart function.
+  Future<ThreadStatus> pCallAsync(int nArgs, int nResults, int msgh);
 
 /* miscellaneous functions */
   void len(int idx);

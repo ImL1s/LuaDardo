@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import '../../lua.dart';
+import '../platform/platform.dart';
 
 class OSLib {
   static const Map<String, DartFunction> _sysFuncs = {
@@ -146,13 +145,18 @@ class OSLib {
   static int _osRemove(LuaState ls) {
     var filename = ls.checkString(1)!;
 
-    try {
-      File(filename).deleteSync();
+    if (!PlatformServices.instance.supportsFileSystem) {
+      ls.pushNil();
+      ls.pushString('os.remove is not supported on this platform');
+      return 2;
+    }
+
+    if (PlatformServices.instance.deleteFile(filename)) {
       ls.pushBoolean(true);
       return 1;
-    } catch (e) {
+    } else {
       ls.pushNil();
-      ls.pushString(e.toString());
+      ls.pushString('cannot remove file: $filename');
       return 2;
     }
   }
@@ -163,13 +167,18 @@ class OSLib {
     var oldName = ls.checkString(1)!;
     var newName = ls.checkString(2)!;
 
-    try {
-      File(oldName).renameSync(newName);
+    if (!PlatformServices.instance.supportsFileSystem) {
+      ls.pushNil();
+      ls.pushString('os.rename is not supported on this platform');
+      return 2;
+    }
+
+    if (PlatformServices.instance.renameFile(oldName, newName)) {
       ls.pushBoolean(true);
       return 1;
-    } catch (e) {
+    } else {
       ls.pushNil();
-      ls.pushString(e.toString());
+      ls.pushString('cannot rename file: $oldName');
       return 2;
     }
   }
@@ -184,10 +193,10 @@ class OSLib {
 // http://www.lua.org/manual/5.3/manual.html#pdf-os.getenv
 // lua-5.3.4/src/loslib.c#os_getenv()
   static int _osGetEnv(LuaState ls) {
-    var key = ls.checkString(1);
-    var env = Platform.environment[key!]!;
+    var key = ls.checkString(1)!;
+    var env = PlatformServices.instance.getEnvironmentVariable(key);
 
-    if (env.isNotEmpty) {
+    if (env != null && env.isNotEmpty) {
       ls.pushString(env);
     } else {
       ls.pushNil();
@@ -198,30 +207,51 @@ class OSLib {
 // os.execute ([command])
 // http://www.lua.org/manual/5.3/manual.html#pdf-os.execute
   static int _osExecute(LuaState ls) {
+    if (!PlatformServices.instance.supportsProcess) {
+      ls.pushNil();
+      ls.pushString('os.execute is not supported on this platform');
+      return 2;
+    }
+
     var cmd = ls.checkString(1)!;
     var args = cmd.split(" ");
-    if(args.length > 1){
+    int? exitCode;
+    if (args.length > 1) {
       var comm = args.removeAt(0);
-      Process.runSync(comm,args);
-    }else{
-      Process.runSync(cmd,[]);
+      exitCode = PlatformServices.instance.runProcess(comm, args);
+    } else {
+      exitCode = PlatformServices.instance.runProcess(cmd, []);
     }
-    return 0;
+
+    if (exitCode != null) {
+      ls.pushBoolean(exitCode == 0);
+      ls.pushString(exitCode == 0 ? 'exit' : 'signal');
+      ls.pushInteger(exitCode);
+      return 3;
+    } else {
+      ls.pushNil();
+      ls.pushString('failed to execute command');
+      return 2;
+    }
   }
 
 // os.exit ([code [, close]])
 // http://www.lua.org/manual/5.3/manual.html#pdf-os.exit
 // lua-5.3.4/src/loslib.c#os_exit()
   static int _osExit(LuaState ls) {
+    int code;
     if (ls.isBoolean(1)) {
-      if (ls.toBoolean(1)) {
-        exit(0);
-      } else {
-        exit(1); // todo
-      }
+      code = ls.toBoolean(1) ? 0 : 1;
     } else {
-      var code = ls.optInteger(1, 1)!;
-      exit(code);
+      code = ls.optInteger(1, 0)!;
+    }
+
+    try {
+      PlatformServices.instance.exit(code);
+    } catch (e) {
+      // On web platform, exit() throws UnsupportedError
+      // In that case, we just return without exiting
+      return 0;
     }
   }
 

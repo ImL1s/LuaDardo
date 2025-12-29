@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import '../vm/instructions.dart';
 
 import '../api/lua_state.dart';
 import '../api/lua_type.dart';
+import '../platform/platform.dart';
 
 // key, in the registry, for table of loaded modules
 const lua_loaded_table = "_LOADED";
@@ -18,7 +17,7 @@ const lua_exec_dir = "!";
 const lua_igmark = "-";
 
 class PackageLib {
-  static final lua_dirsep = Platform.pathSeparator;
+  static String get lua_dirsep => PlatformServices.instance.pathSeparator;
 
   static const Map<String, DartFunction?> _pkgFuncs = {
     "searchpath": _pkgSearchPath,
@@ -108,23 +107,20 @@ class PackageLib {
       name = name!.replaceAll(sep!, dirSep!);
     }
 
+    // On web platform, file system is not supported
+    if (!PlatformServices.instance.supportsFileSystem) {
+      throw Exception("\n\tfile system not supported on this platform");
+    }
+
     for (var filename in path.split(lua_path_sep)) {
       filename = filename.replaceAll(lua_path_mark, name!);
-      if (FileSystemEntity.isDirectorySync(filename)) {
-        if (Directory(filename).existsSync()) {
-          return filename;
-        } else {
-          throw Exception("\n\tno file '" + filename + "'");
-        }
-      } else {
-        if (File(filename).existsSync()) {
-          return filename;
-        } else {
-          throw Exception("\n\tno file '" + filename + "'");
-        }
+      if (PlatformServices.instance.directoryExists(filename)) {
+        return filename;
+      } else if (PlatformServices.instance.fileExists(filename)) {
+        return filename;
       }
     }
-    return '';
+    throw Exception("\n\tno file found for '$name' in path");
   }
 
   // package.searchpath (name, path [, sep [, rep]])

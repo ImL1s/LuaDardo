@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2024-12-29
+
+### Added
+- **Web Platform Support** (#28): Full web compatibility via platform abstraction layer
+  - Conditional imports for `dart:io` (native) and web stub
+  - `PlatformServices` singleton for cross-platform file/process operations
+  - Customizable `printCallback` for output redirection
+  - Web-safe `os` library (time functions work, file operations throw `UnsupportedError`)
+- **Async Dart Function Support** (#9): Call async Dart functions from Lua
+  - `DartFunctionAsync` type: `Future<int> Function(LuaState ls)`
+  - `registerAsync(name, func)` - Register async function as global
+  - `pushDartFunctionAsync(func)` - Push async function onto stack
+  - `pushDartClosureAsync(func, nUpvals)` - Push async closure with upvalues
+  - `callAsync(nArgs, nResults)` - Call function asynchronously
+  - `pCallAsync(nArgs, nResults, errFunc)` - Protected async call
+  - `doStringAsync(code)` - Execute Lua string asynchronously
+  - `doFileAsync(path)` - Execute Lua file asynchronously
+- `luaUpvalueIndex(i)` helper function for accessing upvalues in closures
+- 93 new tests (136 total, up from 43)
+
+### Fixed
+- **`math.min` bug**: Was returning maximum value instead of minimum (comparison logic inverted)
+- **`math.modf` bug**: Was returning only fractional part (return count was 1 instead of 2)
+
+### Changed
+- Replaced deprecated `pedantic` with `lints: ^4.0.0` in dev_dependencies
+- Updated `test` to `^1.25.0`
+
 ## [0.2.0] - 2024-12-29
 
 ### Added
