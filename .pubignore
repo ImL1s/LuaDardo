@@ -1,0 +1,14 @@
+# Generated files
+coverage/
+*.vm.json
+firebase-debug.log
+
+# Development files
+AGENTS.md
+GEMINI.md
+.dart_tool/
+.packages
+build/
+
+# Test coverage
+test/module/coverage/
