@@ -1,6 +1,12 @@
 # LuaDardo Plus
 
+![LuaDardo Plus Hero](assets/images/hero.png)
+
+
 A maintained fork of [LuaDardo](https://github.com/arcticfox1919/LuaDardo) - Lua 5.3 virtual machine written in pure Dart.
+
+[English](README.md) | [繁體中文](README_zh.md)
+
 
 ## Why This Fork?
 
