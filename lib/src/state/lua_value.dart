@@ -1,5 +1,6 @@
 import 'package:lua_dardo_plus/src/state/lua_userdata.dart';
 
+import '../api/lua_state.dart';
 import '../api/lua_type.dart';
 import '../number/lua_number.dart';
 import 'closure.dart';
@@ -21,8 +22,10 @@ class LuaValue {
       return LuaType.luaFunction;
     } else if (val is Userdata) {
       return LuaType.luaUserdata;
+    } else if (val is LuaState) {
+      return LuaType.luaThread;
     } else {
-      throw Exception("TODO");
+      throw Exception("Unknown type: ${val.runtimeType}");
     }
   }
 
@@ -42,6 +45,8 @@ class LuaValue {
       return "function";
     } else if (val is Userdata) {
       return "userdata";
+    } else if (val is LuaState) {
+      return "thread";
     } else {
       return val.runtimeType.toString();
     }

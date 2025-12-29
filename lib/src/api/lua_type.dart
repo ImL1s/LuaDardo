@@ -43,6 +43,7 @@ enum CmpOp {
 enum ThreadStatus {
   luaOk,
   luaYield,
+  luaDead,
   luaErrRun,
   luaErrSyntax,
   luaErrMem,

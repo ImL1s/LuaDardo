@@ -8,6 +8,9 @@ class Closure {
   final DartFunction? dartFunc;
   final List<UpvalueHolder?> upvals;
 
+  /// Number of expected results for coroutine support
+  int nResults = 0;
+
   Closure(Prototype this.proto) :
         this.dartFunc = null,
         this.upvals = List<UpvalueHolder?>.filled(proto.upvalues.length,null);

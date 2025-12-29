@@ -1,6 +1,6 @@
 name: lua_dardo_plus
 description: A maintained fork of LuaDardo - Lua 5.3 virtual machine written in pure Dart. Fixes critical bugs in math.random, error messages, return statements, and userdata metatables.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/ImL1s/LuaDardo
 repository: https://github.com/ImL1s/LuaDardo
 issue_tracker: https://github.com/ImL1s/LuaDardo/issues
