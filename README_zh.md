@@ -190,6 +190,18 @@ void main() async {
 - `doStringAsync(code)` - 非同步執行 Lua 字串
 - `doFileAsync(path)` - 非同步執行 Lua 檔案
 
+## 在 Flutter 中整合
+
+關於如何將 LuaDardo Plus 整合至帶有 Riverpod 狀態管理的 Flutter 應用程式完整範例，請參考 [Flutter Lua Example](https://github.com/ImL1s/flutter_lua_example)。
+
+### 軟體架構
+
+![整合架構圖](assets/images/architecture_zh.png)
+
+### 雙向通訊流程
+
+![通訊流程圖](assets/images/flow_zh.png)
+
 ### Web 平台支援
 
 LuaDardo Plus 支援 Web 平台 (v0.3.0+)。本函式庫使用平台抽象層來處理 `dart:io` 依賴：

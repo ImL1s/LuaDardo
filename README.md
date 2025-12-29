@@ -192,6 +192,18 @@ Available async methods:
 - `doStringAsync(code)` - Execute Lua string asynchronously
 - `doFileAsync(path)` - Execute Lua file asynchronously
 
+## Integration with Flutter
+
+For a full example of how to integrate LuaDardo Plus into a Flutter application with Riverpod state management, see the [Flutter Lua Example](https://github.com/ImL1s/flutter_lua_example).
+
+### Architecture
+
+![Integration Architecture](assets/images/architecture.png)
+
+### Bidirectional Communication Flow
+
+![Communication Flow](assets/images/flow.png)
+
 ### Web Platform Support
 
 LuaDardo Plus works on web platforms (v0.3.0+). The library uses platform abstraction to handle `dart:io` dependencies:
