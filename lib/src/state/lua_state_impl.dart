@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:io';
 
-import 'package:lua_dardo/src/state/lua_userdata.dart';
-import 'package:lua_dardo/src/stdlib/os_lib.dart';
+import 'package:lua_dardo_plus/src/state/lua_userdata.dart';
+import 'package:lua_dardo_plus/src/stdlib/os_lib.dart';
 
 import '../stdlib/math_lib.dart';
 
