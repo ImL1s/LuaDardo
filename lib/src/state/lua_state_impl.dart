@@ -29,8 +29,6 @@ import 'lua_table.dart';
 import 'lua_value.dart';
 import 'closure.dart';
 import 'upvalue_holder.dart';
-import '../types/thread_cache.dart';
-import '../types/exceptions.dart';
 
 /// Global thread ID counter
 int _threadIdCounter = 0;
@@ -1067,7 +1065,7 @@ class LuaStateImpl implements LuaState, LuaVM {
 
   @override
   ThreadStatus loadString(String s) {
-    return load(utf8.encode(s) as Uint8List, s, "bt");
+    return load(Uint8List.fromList(utf8.encode(s)), s, "bt");
   }
 
   @override

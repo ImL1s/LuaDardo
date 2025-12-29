@@ -179,7 +179,7 @@ class BasicLib {
     if (chunk != null) {
       /* loading a string? */
       var chunkName = ls.optString(2, chunk);
-      ThreadStatus status = ls.load(utf8.encode(chunk) as Uint8List, chunkName!, mode);
+      ThreadStatus status = ls.load(Uint8List.fromList(utf8.encode(chunk)), chunkName!, mode);
       return loadAux(ls, status, env);
     } else {
       /* loading from a reader function */

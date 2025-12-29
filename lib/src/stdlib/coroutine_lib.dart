@@ -1,5 +1,4 @@
 import '../../lua.dart';
-import '../types/exceptions.dart';
 
 /// Lua coroutine library implementation.
 /// Provides coroutine.create, coroutine.resume, coroutine.yield, etc.
