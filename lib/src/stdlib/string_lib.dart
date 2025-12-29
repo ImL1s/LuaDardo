@@ -419,33 +419,42 @@ class StringLib {
     return 2;
   }
 
+  // Fix #13: Rewrite gsub to properly handle replacements
   static List<dynamic> gsub(String? s, String pattern, String? repl, int n) {
+    if (s == null || s.isEmpty) {
+      return [s ?? '', 0];
+    }
+
     final regExp = RegExp(pattern);
-    RegExpMatch? regMatch;
+    int nMatches = 0;
 
-    List<Match> indexes = [];
-    for (var i = 0; i < n; i++) {
-      regMatch = regExp.firstMatch(s!);
-      if (regMatch == null) break;
-      indexes.add(regMatch);
-      s = s.substring(regMatch.end + 1);
+    // If n < 0, replace all occurrences (unlimited)
+    // If n == 0, replace nothing
+    // If n > 0, replace up to n occurrences
+    if (n == 0) {
+      return [s, 0];
     }
 
-    if (indexes.isEmpty) {
-      return List.filled(2,null)
-        ..[0] = s
-        ..[1] = 0;
+    String result;
+    if (n < 0) {
+      // Unlimited replacements
+      final matches = regExp.allMatches(s);
+      nMatches = matches.length;
+      result = s.replaceAll(regExp, repl ?? '');
+    } else {
+      // Limited replacements: replace first n occurrences
+      int count = 0;
+      result = s.replaceAllMapped(regExp, (match) {
+        if (count < n) {
+          count++;
+          return repl ?? '';
+        }
+        return match.group(0)!;
+      });
+      nMatches = count;
     }
 
-    var nMatches = indexes.length;
-    var lastEnd = indexes[nMatches - 1].end;
-    var head = s!.substring(0, lastEnd);
-    var tail = s.substring(lastEnd);
-
-    var newHead = head.replaceAll(regExp, repl!);
-    return List.filled(2,null)
-      ..[0] = '$newHead$tail'
-      ..[1] = nMatches;
+    return [result, nMatches];
   }
 
 // string.gmatch (s, pattern)
